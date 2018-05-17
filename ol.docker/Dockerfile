@@ -9,15 +9,18 @@ RUN apt-get update \
 ENV LIBERTY_SHA 127281fdae81670ae20d87c92f8353f179da6c0e 
 ENV LIBERTY_URL https://public.dhe.ibm.com/ibmdl/export/pub/software/openliberty/runtime/nightly/2018-05-14_1451/openliberty-all-20180514-1300.zip
 
+ARG SPRING_BOOT_VERSION
+RUN test -n "$SPRING_BOOT_VERSION"
+ENV SPRING_BOOT_VERSION $SPRING_BOOT_VERSION
+
 RUN wget -q "$LIBERTY_URL" -U UA-Open-Liberty-Docker -O /tmp/wlp.zip \
    && echo "$LIBERTY_SHA  /tmp/wlp.zip" > /tmp/wlp.zip.sha1 \
    && sha1sum -c /tmp/wlp.zip.sha1 \
    && unzip -q /tmp/wlp.zip -d /opt/ol \
    && rm /tmp/wlp.zip \
-   && rm /tmp/wlp.zip.sha1
-
-# Prime server cache
-RUN mkdir -p /opt/ol/wlp/usr/servers/springServer/ \
+   && rm /tmp/wlp.zip.sha1 \
+   && mkdir -p /opt/ol/wlp/usr/servers/springServer/ \
+   && echo spring.boot.version="$SPRING_BOOT_VERSION" > /opt/ol/wlp/usr/servers/springServer/bootstrap.properties \
    && echo \
 '<?xml version="1.0" encoding="UTF-8"?> \
 <server description="Spring Boot Server"> \
@@ -25,7 +28,7 @@ RUN mkdir -p /opt/ol/wlp/usr/servers/springServer/ \
     <feature>jsp-2.3</feature> \
     <feature>transportSecurity-1.0</feature> \
     <feature>websocket-1.1</feature> \
-    <feature>springBoot-1.5</feature> \
+    <feature>springBoot-${spring.boot.version}</feature> \
   </featureManager> \
   <httpEndpoint id="defaultHttpEndpoint" host="*" httpPort="9080" httpsPort="9443" /> \
   <include location="appconfig.xml"/> \
@@ -40,6 +43,7 @@ RUN mkdir -p /opt/ol/wlp/usr/servers/springServer/ \
 
 # Stage the fat JAR
 ARG APP_FILE
+RUN test -n "$APP_FILE"
 COPY ${APP_FILE} /staging/myFatApp.jar
 
 # Thin the fat application; stage the thin app output and the library cache
