@@ -17,16 +17,30 @@ RUN wget -q "$LIBERTY_URL" -U UA-Open-Liberty-Docker -O /tmp/wlp.zip \
    && rm /tmp/wlp.zip.sha1
 
 # Prime server cache
-COPY springServer/server.xml /opt/ol/wlp/usr/servers/springServer/server.xml
-RUN /opt/ol/wlp/bin/server start springServer \
-  && /opt/ol/wlp/bin/server stop springServer 
+RUN mkdir -p /opt/ol/wlp/usr/servers/springServer/ \
+   && echo \
+'<?xml version="1.0" encoding="UTF-8"?> \
+<server description="Spring Boot Server"> \
+  <featureManager> \
+    <feature>jsp-2.3</feature> \
+    <feature>transportSecurity-1.0</feature> \
+    <feature>websocket-1.1</feature> \
+    <feature>springBoot-1.5</feature> \
+  </featureManager> \
+  <httpEndpoint id="defaultHttpEndpoint" host="*" httpPort="9080" httpsPort="9443" /> \
+  <include location="appconfig.xml"/> \
+</server>' > /opt/ol/wlp/usr/servers/springServer/server.xml \
+   && /opt/ol/wlp/bin/server start springServer \
+   && /opt/ol/wlp/bin/server stop springServer \
+   && echo \
+'<?xml version="1.0" encoding="UTF-8"?> \
+<server description="new server"> \
+  <springBootApplication location="app.jar" name="Spring Boot application" /> \
+</server>' > /opt/ol/wlp/usr/servers/springServer/appconfig.xml
 
 # Stage the fat JAR
 ARG APP_FILE
 COPY ${APP_FILE} /staging/myFatApp.jar
-
-# Add the Open Liberty server
-COPY springServer/appconfig.xml /opt/ol/wlp/usr/servers/springServer/appconfig.xml
 
 # Thin the fat application; stage the thin app output and the library cache
 RUN /opt/ol/wlp/bin/springBootUtility thin --sourceAppPath=/staging/myFatApp.jar --targetThinAppPath=/staging/myThinApp.jar --targetLibCachePath=/staging/lib.index.cache
@@ -43,7 +57,7 @@ COPY --from=staging /opt/ol/wlp /opt/ol/wlp
 
 COPY --from=staging /staging/lib.index.cache /opt/ol/wlp/usr/shared/resources/lib.index.cache
 
-COPY --from=staging /staging/myThinApp.jar /opt/ol/wlp/usr/servers/springServer/apps/myThinApp.jar
+COPY --from=staging /staging/myThinApp.jar /opt/ol/wlp/usr/servers/springServer/apps/app.jar
 
 CMD ["/opt/ol/wlp/bin/server", "run", "springServer"]
 
