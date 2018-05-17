@@ -37,7 +37,7 @@ RUN wget -q "$LIBERTY_URL" -U UA-Open-Liberty-Docker -O /tmp/wlp.zip \
    && /opt/ol/wlp/bin/server stop springServer \
    && echo \
 '<?xml version="1.0" encoding="UTF-8"?> \
-<server description="new server"> \
+<server description="Spring Boot application config"> \
   <springBootApplication location="app.jar" name="Spring Boot application" /> \
 </server>' > /opt/ol/wlp/usr/servers/springServer/appconfig.xml
 
